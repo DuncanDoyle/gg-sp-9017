@@ -1,0 +1,19 @@
+# HTTPS listener for the TLS amplification test (test-jwks-per-filter-chain.sh).
+# Each TLS VirtualService has its own secretRef, which produces a distinct
+# Envoy filter chain per VS on this listener (see Gloo translation in
+# gloo/projects/gloo/pkg/translator/filter_chain.go and ssl_configuration.go).
+apiVersion: gateway.solo.io/v1
+kind: Gateway
+metadata:
+  labels:
+    app: gloo
+  name: gateway-proxy-ssl
+  namespace: gloo-system
+spec:
+  bindAddress: '::'
+  bindPort: 8443
+  httpGateway: {}
+  proxyNames:
+  - gateway-proxy
+  ssl: true
+  useProxyProto: false

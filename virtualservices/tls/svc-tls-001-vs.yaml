@@ -1,0 +1,45 @@
+# TLS VirtualService #001 for the JWKS-per-filter-chain test.
+# Each VS uses a distinct secretRef (tls-svc-001) so Gloo produces a
+# distinct Envoy filter chain. Each VS also defines a distinct JWT provider
+# (provider-001 with a distinct JWKS URL) so we can identify which providers
+# end up in which filter chain when inspecting /config_dump.
+apiVersion: gateway.solo.io/v1
+kind: VirtualService
+metadata:
+  name: svc-tls-001
+  namespace: gloo-system
+spec:
+  sslConfig:
+    secretRef:
+      name: tls-svc-001
+      namespace: gloo-system
+    sniDomains:
+    - "svc-001.example.com"
+  virtualHost:
+    domains:
+    - "svc-001.example.com"
+    options:
+      jwt:
+        providers:
+          # Each VS defines a UNIQUE provider name + URL so we can identify
+          # which providers ended up in which filter chain.
+          provider-001:
+            issuer: https://auth-001.example.com/
+            jwks:
+              remote:
+                asyncFetch:
+                  fastListener: true
+                cacheDuration: 3600s
+                upstreamRef:
+                  name: failing-jwks
+                  namespace: gloo-system
+                url: https://jwks-001.example.com/.well-known/jwks.json
+            keepToken: true
+    routes:
+    - matchers:
+      - prefix: /
+      routeAction:
+        single:
+          upstream:
+            name: httpbin-httpbin-8000
+            namespace: gloo-system
