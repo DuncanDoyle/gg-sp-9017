@@ -1,0 +1,43 @@
+# Step 2: Apply this VirtualService to trigger the timer leak.
+#
+# Any config change that causes the jwt_authn filter to be reconstructed creates a new
+# async fetch timer without cancelling the previous one.
+#
+# After applying this:
+#   Expected: still 1 JWKS failure log line per interval (timer reused/replaced)
+#   Actual:   2 failure lines appear simultaneously at each interval; interval shortens
+#
+# Deleting this VS causes another config update, adding yet another leaked timer —
+# the failure count INCREASES after deletion rather than returning to 1.
+apiVersion: gateway.solo.io/v1
+kind: VirtualService
+metadata:
+  name: svc-002
+  namespace: gloo-system
+spec:
+  virtualHost:
+    domains:
+    - "svc-002.example.com"
+    options:
+      jwt:
+        providers:
+          auth0:
+            issuer: https://auth0.example.com/
+            jwks:
+              remote:
+                asyncFetch:
+                  fastListener: true
+                cacheDuration: 3600s
+                upstreamRef:
+                  name: failing-jwks
+                  namespace: gloo-system
+                url: https://192.0.2.1/.well-known/jwks.json
+            keepToken: true
+    routes:
+    - matchers:
+      - prefix: /
+      routeAction:
+        single:
+          upstream:
+            name: httpbin-httpbin-8000
+            namespace: gloo-system

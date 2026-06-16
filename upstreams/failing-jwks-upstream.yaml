@@ -1,0 +1,13 @@
+# Upstream pointing at an unreachable host (TEST-NET-1, RFC 5737).
+# Gloo's JWT plugin requires an upstreamRef on every JWKS source. We point it
+# at 192.0.2.1:443 so that JWKS fetches always fail without needing a real server.
+apiVersion: gloo.solo.io/v1
+kind: Upstream
+metadata:
+  name: failing-jwks
+  namespace: gloo-system
+spec:
+  static:
+    hosts:
+    - addr: 192.0.2.1
+      port: 443

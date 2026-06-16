@@ -1,0 +1,45 @@
+# BUG: jwt_authn async fetcher timer leak — solo-projects#9017
+#
+# When this VirtualService is applied, Envoy starts one async JWKS fetch timer.
+# With an unreachable endpoint, you will see one failure log line every ~6 seconds:
+#
+#   [warning][jwt] Jwks async fetching url=https://192.0.2.1/.well-known/jwks.json: failed
+#
+# Expected after any config update: the existing timer is cancelled and replaced (1 log line/interval)
+# Actual: each config update that touches jwt_authn spawns an additional timer (count grows unbounded)
+apiVersion: gateway.solo.io/v1
+kind: VirtualService
+metadata:
+  name: svc-001
+  namespace: gloo-system
+spec:
+  virtualHost:
+    domains:
+    - "svc-001.example.com"
+    options:
+      jwt:
+        providers:
+          auth0:
+            issuer: https://auth0.example.com/
+            jwks:
+              remote:
+                # asyncFetch causes Envoy to maintain a background timer that periodically
+                # re-fetches JWKS. fastListener allows traffic to flow before JWKS is loaded.
+                asyncFetch:
+                  fastListener: true
+                cacheDuration: 3600s
+                # Gloo's JWT plugin requires an upstreamRef; the static upstream points at
+                # 192.0.2.1 (TEST-NET-1, RFC 5737) which is guaranteed unreachable.
+                upstreamRef:
+                  name: failing-jwks
+                  namespace: gloo-system
+                url: https://192.0.2.1/.well-known/jwks.json
+            keepToken: true
+    routes:
+    - matchers:
+      - prefix: /
+      routeAction:
+        single:
+          upstream:
+            name: httpbin-httpbin-8000
+            namespace: gloo-system

@@ -1,0 +1,54 @@
+gloo:
+  # Disable K8s Gateway API integration — this reproducer uses the Gloo Edge API only.
+  kubeGateway:
+    enabled: false
+  gatewayProxies:
+    gatewayProxy:
+      healthyPanicThreshold: 0
+      kind:
+        deployment:
+          replicas: 1
+      service:
+        type: LoadBalancer
+  gateway:
+    persistProxySpec: true
+    logLevel: info
+    validation:
+      allowWarnings: true
+      alwaysAcceptResources: false
+  gloo:
+    logLevel: info
+    disableLeaderElection: true
+    deployment:
+      replicas: 1
+      livenessProbeEnabled: true
+  discovery:
+    enabled: true
+  settings:
+    devMode: true
+
+observability:
+  enabled: false
+
+prometheus:
+  enabled: false
+
+grafana:
+  defaultInstallationEnabled: false
+
+gloo-fed:
+  enabled: false
+  glooFedApiserver:
+    enable: false
+
+gateway-portal-web-server:
+  enabled: false
+
+global:
+  glooRbac:
+    namespaced: false
+  extensions:
+    rateLimit:
+      enabled: false
+    extAuth:
+      enabled: false
